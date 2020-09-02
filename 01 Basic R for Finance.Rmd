@@ -9,22 +9,25 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# R Basic
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Matrix
+We can create matrix from one atomic vector.
+```{r}
+x_vec <- c(9, 4, 6, 20, 19, 29)
+x_mat <- matrix(data = x_vec, nrow = 2, ncol = 3, byrow = TRUE)
+x_mat
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+cor(x_mat)
 ```
 
-## Including Plots
+We can also create matrix from 2 vectors.
+```{r}
+y_vec = rnorm(6, 23, 98)
 
-You can also embed plots, for example:
+matrix_yx <- cbind(x_vec, y_vec)
+matrix_yx
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+cor(matrix_yx)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
