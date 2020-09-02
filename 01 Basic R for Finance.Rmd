@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # R Basic
 
-## Matrix
+## Working with Matrix
 We can create matrix from one atomic vector.
 ```{r}
 x_vec <- c(9, 4, 6, 20, 19, 29)
@@ -29,5 +29,46 @@ matrix_yx <- cbind(x_vec, y_vec)
 matrix_yx
 
 cor(matrix_yx)
+```
+
+## Working with DataFrame
+
+```{r}
+cash_flow <- rnorm(10, 4, 9)
+year <- runif(10, 5, 45)
+company <- c("Google", "Google", "Microsoft", "Microsoft", "Apple", "Apple", "Google", "Google", "Microsoft", "Microsoft")
+company_data <- data.frame(company, cash_flow, year)
+company_data
+
+# sub-setting the DF
+company_data[1:3,1, drop=FALSE]
+company_data$cash_flow
+subset(company_data, cash_flow < 6.00)
+
+# Delete a column
+company_data$year = NULL
+company_data
+```
+## Working with Factor
+```{r}
+# Factor will make R treat string as integer.
+investment <- c("stock", "bonds", "stock", "bonds", "stock")
+investment_factor <- factor(investment)
+# Summary of factor is more informative.
+summary(investment)
+summary(investment_factor)
+# Change the levels.
+investment
+levels(investment) <- c("B", "S")
+investment
+
+# cut() will factoring the numbers based on interval.
+price <- runif(100, 20, 100)
+breaks <- c(0, 20, 40, 60, 80, 100)
+ranking_grouped <- cut(price, breaks = breaks)
+head(ranking_grouped)
+levels(ranking_grouped) <- c("very_low", "low", "medium", "high", "very_high")
+# Plot the factor
+plot(ranking_grouped)
 ```
 
