@@ -1,0 +1,28 @@
+---
+title: "Manipulating Time Series Data with xts and zoo in R"
+author: "Boni"
+date: "9/2/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Time Series Data with xts and zoo
+xts stands for Extensible Time Series
+
+```{r}
+library(xts)
+library(zoo)
+# XTS = MATRIX + INDEX
+x <- matrix(1:6, ncol = 2, nrow = 3)
+x
+
+idx <- as.Date(c("2020-05-09", "1989-05-09", "2019-09-17"))
+idx
+
+X <- xts(x = x, order.by = idx)
+X
+```
+

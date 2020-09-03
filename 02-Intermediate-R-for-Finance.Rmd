@@ -73,3 +73,141 @@ names(dates2) <- weekdays(dates2)
 dates2
 ```
 
+## Relational operators
+```{r}
+today <- 23.45
+yesterday <- 34.23
+today > yesterday
+
+one <- 1
+one == TRUE
+```
+
+## Working with loops
+```{r}
+# Using repeat
+i <- 0
+
+repeat {
+  i <- i + 1
+  print(i)
+  if (i == 9) {
+    break
+  }
+}
+
+# while loop
+stock_price <- 53.89
+
+while (stock_price < 60) {
+  stock_price <- stock_price * runif(1, 0.8, 1.2)
+  print(stock_price)
+}
+
+# For loops
+x <- 1:5
+for (n in x) {
+  print(n)
+}
+```
+
+## Working with function
+```{r}
+x <- runif(9, 0.3, 1.4)
+x
+diff(x) # X_i - X_(i-t)
+
+# Arithmetic return
+prices <- c(23.4, 23.8, 22.3)
+
+arith_return <- function(x) {
+  diff(x) / x[-length(x)]
+}
+
+arith_return(prices) # (X_i - X_(i-t)) / X_(i-t)
+```
+
+## Functions and packages related to financial data
+```{r}
+library(tidyquant)
+library(quantmod)
+
+quantmod::getSymbols(c("IBM", "MSFT"))
+plot(IBM$IBM.Adjusted)
+plot(MSFT$MSFT.Adjusted)
+```
+
+```{r}
+# Pull Apple stock data
+apple <- tq_get("AAPL", get = "stock.prices", 
+                from = "2007-01-03", to = "2017-06-05")
+
+# Take a look at what it returned
+head(apple)
+
+# Plot the stock price over time
+plot(apple$date, apple$adjusted, type = "l")
+
+# Calculate daily stock returns for the adjusted price
+apple <- tq_mutate(data = apple,
+                   ohlc_fun = Ad,
+                   mutate_fun = dailyReturn)
+
+# Sort the returns from least to greatest
+sorted_returns <- sort(apple$daily.returns)
+
+# Plot them
+plot(sorted_returns)
+```
+
+## Use apply function
+There are many apply family:
+
+- apply (Apply function over array margins)
+- **lapply** (Apply a function over a list or vector)
+- eapply (Apply a function over values in environment)
+- mapply (Apply a function to multiple lists or vector arguments)
+- rapply (Recursively apply a function to a list)
+- tapply (Apply a function over ragged array)
+- **sapply** (Simplify the result from lapply)
+- **vapply** (Strictly simplify the result from lapply)
+```{r}
+# lapply in list
+list1 <- list("Boni", 31, "University of Chicago", TRUE)
+names(list1) <- c("name", "age", "university", "handsome")
+lapply(list1, class)
+# lapply in data frame
+a <- c(1,2)
+b <- c(3,4)
+df <- data.frame(a, b)
+lapply(df, sum) # lapply will create summary of each columns
+```
+Many times lapply works better than sapply because sapply simplify many things that might be not expected.
+```{r}
+# sapply in list
+list1 <- list("Boni", 31, "University of Chicago", TRUE)
+names(list1) <- c("name", "age", "university", "handsome")
+sapply(list1, class)
+
+# sapply in data frame
+a <- c(1,2)
+b <- c(3,4)
+df <- data.frame(a, b)
+sapply(df, sum) # sapply will create summary of each columns
+```
+
+```{r}
+# Market crash with as.POSIXct()
+market_crash2 <- list(dow_jones_drop = 777.68, 
+                      date = as.POSIXct("2008-09-28"))
+
+# Find the classes with sapply()
+sapply(market_crash2, class)
+
+# Find the classes with vapply()
+# vapply(market_crash2, class, FUN.VALUE = character(1))
+
+df <- data.frame(ibm = runif(10, 3, 9), apple = rnorm(10, 3, 1))
+vapply(df, FUN = function(x) {c(max = max(x), min = min(x))}, FUN.VALUE = numeric(2))
+```
+
