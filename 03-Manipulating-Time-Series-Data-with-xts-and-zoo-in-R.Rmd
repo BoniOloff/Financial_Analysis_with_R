@@ -106,8 +106,15 @@ head(am2)
 first(sunspots_xts, "5 months")
 last(sunspots_xts, "2 years")
 ```
+**notes**
 
-Use rbind to add rows from multiple xts
-Use join to merge multiple xts with different column
-Use na.locf() to fill missing value with the previous date value. Add parameter fromLast to fill the missing value with the next date value.
-Use na.approx() to fill missing value with interpolate value using linear approximation.
+- Use rbind to add rows from multiple xts
+- Use join to merge multiple xts with different column
+- Use na.locf() to fill missing value with the previous date value. Add parameter fromLast to fill the missing value with the next date value.
+- Use na.approx() to fill missing value with interpolate value using linear approximation.
+- Use split() to split the data by week, month, year, etc.
+- Use to.period() to get OHLC information by month, year, week, etc.
+- Use index() to get the time index.
+- Use indexClass() to get the index class.
+- Use indexFormat() to get or set the index time format.
+- Use tzone() to get the time zone of the index.
