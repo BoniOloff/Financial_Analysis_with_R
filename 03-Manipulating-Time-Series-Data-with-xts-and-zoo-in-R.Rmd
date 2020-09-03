@@ -107,3 +107,7 @@ first(sunspots_xts, "5 months")
 last(sunspots_xts, "2 years")
 ```
 
+Use rbind to add rows from multiple xts
+Use join to merge multiple xts with different column
+Use na.locf() to fill missing value with the previous date value. Add parameter fromLast to fill the missing value with the next date value.
+Use na.approx() to fill missing value with interpolate value using linear approximation.
