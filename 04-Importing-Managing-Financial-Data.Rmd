@@ -9,22 +9,92 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# Use getSymbols()
+```{r}
+library(quantmod)
+getSymbols(Symbols = "AAPL", src = "av", api.key = "0ST2PMQENLUXD5YT") 
+# alphavantage 0ST2PMQENLUXD5YT
+# src can be alphavantage (av), google, yahoo, fred
+first(AAPL, 5)
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+getSymbols("GDP", src="FRED")
+first(GDP, 5)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+# Use Quandl()
+```{r}
+library(Quandl)
+dgs10 <- Quandl::Quandl(code = "FRED/DGS10", type = "xts")
+first(dgs10, 5)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+# Get currency from Oanda
+```{r}
+# Get available currency in Oanda
+head(quantmod::oanda.currencies)
+
+# Create a currency_pair object
+currency_pair <- "GBP/CAD"
+
+# Load British Pound to Canadian Dollar exchange rate data
+getSymbols(currency_pair, src = "oanda")
+
+# Examine object using str()
+str(GBPCAD)
+
+# Try to load data from 190 days ago
+getSymbols(currency_pair, from = Sys.Date() - 190, to = Sys.Date(), src = "oanda")
+```
+
+# Unemployment Rate from FRED
+```{r}
+# Create a series_name object
+series_name <- "UNRATE"
+
+# Load the data using getSymbols
+getSymbols(series_name, src = "FRED", type = "xts")
+head(UNRATE)
+
+# Create a quandl_code object
+quandl_code <- "FRED/UNRATE"
+
+# Load the data using Quandl
+unemploy_rate <- Quandl(quandl_code, type = "xts")
+head(unemploy_rate)
+```
+
+# Extract OHLC
+```{r}
+# Important method to extract OHLC information: Op(), Hi(), Lo(), Cl(), Vo(), Ad(), and OHLC()
+# Learn more: help("OHLC.Transformations")
+
+# Get Symbols
+getSymbols("TSLA", src = "yahoo", type = "xts")
+
+# Extract the close column
+tsla_close <- Cl(TSLA)
+
+# Look at the head of dc_close
+head(tsla_close)
+
+# Extract the volume column
+tsla_volume <- Vo(TSLA)
+
+# Look at the head of dc_volume
+head(tsla_volume)
+
+# Extract the high, low, and close columns
+tsla_hlc <- HLC(TSLA)
+
+# Look at the head of dc_hlc
+head(tsla_hlc)
+
+# Extract the open, high, low, close, and volume columns
+tsla_ohlcv <- OHLCV(TSLA)
+
+# Look at the head of dc_ohlcv
+head(tsla_ohlcv)
+
+```
+
