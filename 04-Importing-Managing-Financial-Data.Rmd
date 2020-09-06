@@ -7,6 +7,7 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(quantmod)
 ```
 
 # Use getSymbols()
@@ -96,5 +97,84 @@ tsla_ohlcv <- OHLCV(TSLA)
 # Look at the head of dc_ohlcv
 head(tsla_ohlcv)
 
+```
+
+## Extract the Close column from many instruments
+
+```{r}
+Cl <- function (x) 
+{
+    if (has.Cl(x)) 
+        return(x[, grep("Close", colnames(x), ignore.case = TRUE)])
+    stop("subscript out of bounds: no column name containing \"Close\"")
+}
+
+# Symbols
+symbols <- c("AAPL", "MSFT", "IBM")
+
+# Create new environment
+data_env <- new.env()
+
+# Load symbols into data_env
+getSymbols(symbols, env = data_env)
+
+# Extract the close column from each object and combine into one xts object
+close_data <- do.call(merge, eapply(data_env, Cl))
+
+# View the head of close_data
+head(close_data)
+```
+
+## Change default getSymbols()
+
+```{r}
+# Look at getSymbols.yahoo arguments
+args(getSymbols.yahoo)
+
+# Set default 'from' value for getSymbols.yahoo
+setDefaults(getSymbols.yahoo, from = "2000-01-01")
+
+# Confirm defaults were set correctly
+getDefaults(name = "getSymbols.yahoo")
+```
+
+## Handling instrument symbols that clash or are not valid R names
+
+```{r}
+# get BRK-A
+getSymbols("BRK-A")
+
+# Assign the result to BRK.A
+BRK.A <- get("BRK-A")
+
+head(BRK.A)
+```
+
+## Another way to handle invalid names (1)
+
+```{r}
+# Create BRK.A object
+BRK.A <- getSymbols("BRK-A", auto.assign = FALSE)
+
+# Create col_names object with the column names of BRK.A
+col_names <- colnames(BRK.A)
+
+# Set BRK.A column names to syntactically valid names
+colnames(BRK.A) <- make.names(col_names)
+
+head(BRK.A)
+```
+
+## Another day to handle invalid names (2)
+
+```{r}
+# Set name for BRK-A to BRK.A
+setSymbolLookup(BRK.A = list(name = "BRK-A"))
+
+# Set name for T (AT&T) to ATT
+setSymbolLookup(ATT = list(name = "T"))
+
+# Load BRK.A and ATT data
+getSymbols(c("BRK.A", "ATT"))
 ```
 
