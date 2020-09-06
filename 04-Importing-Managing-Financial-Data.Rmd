@@ -8,11 +8,11 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(quantmod)
+library(Quandl)
 ```
 
 # Use getSymbols()
 ```{r}
-library(quantmod)
 getSymbols(Symbols = "AAPL", src = "av", api.key = "0ST2PMQENLUXD5YT") 
 # alphavantage 0ST2PMQENLUXD5YT
 # src can be alphavantage (av), google, yahoo, fred
@@ -25,7 +25,6 @@ first(GDP, 5)
 
 # Use Quandl()
 ```{r}
-library(Quandl)
 dgs10 <- Quandl::Quandl(code = "FRED/DGS10", type = "xts")
 first(dgs10, 5)
 ```
@@ -176,5 +175,123 @@ setSymbolLookup(ATT = list(name = "T"))
 
 # Load BRK.A and ATT data
 getSymbols(c("BRK.A", "ATT"))
+```
+
+## Aggregate daily data and merge with monthly data
+Sometimes two series have the same periodicy, but use different conventions to represent a timestamp. For example, monthly series may be timestamped with the first or last date of the month. The different timestamp convention can cause many NA when series are merged. The yearmon class from the zoo package helps solve this problem.
+```{r}
+getSymbols(c("FEDFUNDS", "DFF"), src = "FRED")
+
+# Aggregate DFF to monthly
+monthly_fedfunds <- apply.monthly(DFF, mean)
+
+# Convert index to yearmon
+index(monthly_fedfunds) <- as.yearmon(index(monthly_fedfunds))
+
+# Merge FEDFUNDS with the monthly aggregate
+merged_fedfunds <- merge(FEDFUNDS, monthly_fedfunds)
+
+# Look at the first few rows of the merged object
+head(merged_fedfunds)
+```
+
+## Align series to first and last day of month
+Sometimes you may not be able to use convenience classes like yearmon to represent timestamps. This exercise will teach you how to manually align merged data to the timestamp representation you prefer.
+
+First you merge the lower-frequency data with the aggregate data, then use na.locf() to fill the NA forward (or backward, using fromLast = TRUE). Then you can subset the result using the index of the object with the representation you prefer.
+
+```{r}
+# Fill NA forward
+merged_fedfunds_locf <- na.locf(merged_fedfunds)
+
+# Extract index values containing last day of month
+aligned_last_day <- merged_fedfunds_locf[index(monthly_fedfunds)]
+
+# Fill NA backward
+merged_fedfunds_locb <- na.locf(merged_fedfunds, fromLast = TRUE)
+
+# Extract index values containing first day of month
+aligned_first_day <- merged_fedfunds_locb[index(FEDFUNDS)]
+```
+
+## Aggregate to weekly, ending on Wednesdays
+In this exercise, you will learn a general aggregation technique to aggregate daily data to weekly, but with weeks ending on Wednesdays. This is often done in stock market research to avoid intra-week seasonality.
+
+You can supply your own end points to period.apply() (versus using endpoints()). Recall endpoints() returns locations of the last observation in each period specified by the on argument. The first and last elements of the result are always zero and the total number of observations, respectively. The end points you pass to period.apply() must follow this convention.
+
+```{r}
+# Extract index weekdays
+index_weekdays <- .indexwday(DFF)
+
+# Find locations of Wednesdays
+wednesdays <- which(index_weekdays == 3)
+
+# Create custom end points
+end_points <- c(0, wednesdays, nrow(DFF))
+
+# Calculate weekly mean using custom end points
+weekly_mean <- period.apply(DFF, end_points, mean)
+```
+
+## Merge intraday data with different TZ
+
+```{r}
+# Create merged object with a Europe/London timezone
+# tz_london <- merge(london, chicago)
+
+# Look at tz_london structure
+# str(tz_london)
+
+# Create merged object with a America/Chicago timezone
+# tz_chicago <- merge(chicago, london)
+
+# Look at tz_chicago structure
+# str(tz_chicago)
+```
+
+## Download split and dividend data
+In the previous exercise, you used adjustOHLC() to adjust raw historical OHLC prices for splits and dividends, but it only works for OHLC data. It will not work if you only have close prices, and it does not return any of the split or dividend data it uses.
+
+You need the dates and values for each split and dividend to adjust a non-OHLC price series, or if you simply want to analyze the raw split and dividend data.
+
+You can download the split and dividend data from Yahoo Finance using the quantmod functions getSplits() and getDividends(), respectively. The historical dividend data from Yahoo Finance is adjusted for splits. If you want to download unadjusted dividend data, you need to set split.adjust = FALSE in your call to getDividends().
+```{r}
+# Download AAPL split data
+splits <- getSplits("AAPL")
+
+# Download AAPL dividend data
+dividends <- getDividends("AAPL")
+
+# Look at the first few rows of dividends
+head(dividends)
+
+# Download unadjusted AAPL dividend data
+raw_dividends <- getDividends("AAPL", split.adjust = FALSE)
+
+# Look at the first few rows of raw_dividends
+head(raw_dividends)
+```
+
+## Adjust univariate data for splits and dividends
+If you only have close prices, you can adjust them with adjRatios(). It has 3 arguments: splits, dividends, and close. It returns an xts object with split and dividend adjustment ratios in columns "Split" and "Div", respectively.
+
+You need to provide split data via the splits argument to calculate the split ratio. To calculate the dividend ratio, you need to provide raw dividends and raw prices via the dividends and close arguments, respectively.
+
+Once you have the split and dividend adjustment ratios, you calculate the adjusted price multiplying the unadjusted price by both the split and dividend adjustment ratios.
+
+```{r}
+getSymbols("AAPL")
+
+# Calculate split and dividend adjustment ratios
+ratios <- adjRatios(splits = splits, dividends = raw_dividends, close = Cl(AAPL))
+
+# Calculate adjusted close for AAPL
+aapl_adjusted <- Cl(AAPL) * ratios[, "Split"] * ratios[, "Div"]
+
+# Look at first few rows of Yahoo adjusted close
+head(Ad(AAPL))
+
+# Look at first few rows of aapl_adjusted
+head(aapl_adjusted)
 ```
 
