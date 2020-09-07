@@ -7,24 +7,198 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(astsa)
+library(tidyverse)
+library(quantmod)
+library(xts)
 ```
 
-## R Markdown
+# Time series data and models
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+The AirPassengers data show a handful of important qualities, including seasonality, trend, and heteroscedasticity, which distinguish the data from standard white noise.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r Explore 3 possible types of TS}
+# Plot AirPassengers
+plot(AirPassengers)
 
-```{r cars}
-summary(cars)
+# Plot the DJIA daily closings
+plot(Cl(djia))
+
+# Plot the Southern Oscillation Index
+plot(soi)
+
+
 ```
 
-## Including Plots
+## Stationarity and nonstationarity
 
-You can also embed plots, for example:
+A time series is Stationary when it is "stable" meaning:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+ - the mean is constant over time (no trend)
+ - the correlation structure is constant over time.
+ 
+Random walk trend:
+
+ - Not stationary, but differences in lag of data are stationary.
+ 
+Trend stationary:
+
+ - Stationary with trend (increase/decrease)
+
+## Detrending the data
+
+```{r}
+# Plot globtemp and detrended globtemp
+par(mfrow = c(2,1))
+plot(globtemp) 
+plot(diff(globtemp))
+
+# Plot cmort and detrended cmort
+par(mfrow = c(2,1))
+plot(cmort)
+plot(diff(cmort))
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Dealing with trends and heterokedasticity
+```{r}
+# astsa and xts are preloaded 
+
+# Plot GNP series (gnp) and its growth rate
+par(mfrow = c(2,1))
+plot(gnp)
+plot(diff(log(gnp)))
+
+# Plot the DJIA closings (djia$Close) and its returns
+par(mfrow = c(2,1))
+plot(djia$Close)
+plot(diff(log((djia$Close))))
+
+```
+
+## Stationary time series ARMA
+```{r}
+# Generate and plot white noise
+WN <- arima.sim(model = list(order = c(0, 0, 0)), n = 200)
+plot(WN)
+
+# Generate and plot an MA(1) with parameter .9 by filtering the noise
+MA <- arima.sim(model = list(order = c(0, 0, 1), ma = .9), n = 200)  
+plot(MA)
+
+# Generate and plot an AR(1) with parameters 1.5 and -.75
+AR <- arima.sim(model = list(order = c(2, 0, 0), ar = c(1.5, -.75)), n = 200) 
+plot(AR)
+
+```
+
+# Fitting ARMA Model
+
+## AR and MA Models
+
+```{r}
+x <- arima.sim(list(order = c(1, 0, 0), ar = -.7), n = 200)
+y <- arima.sim(list(order = c(0, 0, 1), ma = -.7), n = 200)
+par(mfrow = c(1, 2))
+plot(x, main = "AR(1)")
+plot(x, main = "MA(1)")
+```
+
+By looking at the graph we can not identify the model, we need tools like ACF (Auto Correlation Function) and PACF (Partial Auto Correlation Function) in R.
+
+## Fitting an AR(1) model
+
+In this exercise, you will generate data from the AR(1) model, 
+
+$X_t=.9X_{(t-1)}+w_t$
+
+look at the simulated data and the sample ACF and PACF pair to determine the order. Then, you will fit the model and compare the estimated parameters to the true parameters.
+
+Throughout this course, you will be using sarima() from the astsa package to easily fit models to data. The command produces a residual diagnostic graphic that can be ignored until diagnostics is discussed later in the chapter.
+
+```{r}
+# Generate 100 observations from the AR(1) model
+x <- arima.sim(model = list(order = c(1, 0, 0), ar = .9), n = 100)
+
+# Plot the generated data  
+plot(x)
+
+# Plot the sample P/ACF pair
+acf2(x)
+
+# Fit an AR(1) to the data and examine the t-table
+sarima(x, p = 1, d = 0, q = 0)
+
+```
+
+## Fitting an AR(2) model
+For this exercise, we generated data from the AR(2) model,
+
+$X_{(t=1)}=1.5X_{(t-1)}-1.75X_{(t-2)}+W_t$
+
+using x <- arima.sim(model = list(order = c(2, 0, 0), ar = c(1.5, -.75)), n = 200). Look at the simulated data and the sample ACF and PACF pair to determine the model order. Then fit the model and compare the estimated parameters to the true parameters.
+
+```{r}
+# astsa is preloaded
+x <- arima.sim(model = list(order = c(2, 0, 0), ar = c(1.5, -.75)), n = 200)
+
+# Plot x
+plot(x)
+
+# Plot the sample P/ACF of x
+acf2(x)
+
+# Fit an AR(2) to the data and examine the t-table
+sarima(x, p = 2, d = 0, q = 0)
+
+```
+
+## Fitting an MA(1) model
+In this exercise, we generated data from an MA(1) model,
+
+$X_t=W_t-.8w_{t-1}$
+
+x <- arima.sim(model = list(order = c(0, 0, 1), ma = -.8), n = 100). Look at the simulated data and the sample ACF and PACF to determine the order based on the table given in the first exercise. Then fit the model.
+
+Recall that for pure MA(q) models, the theoretical ACF will cut off at lag q while the PACF will tail off.
+
+```{r}
+# astsa is preloaded
+x <- arima.sim(model = list(order = c(0, 0, 1), ma = -.8), n = 100)
+
+# Plot x
+plot(x)
+
+# Plot the sample P/ACF of x
+acf2(x)
+
+# Fit an MA(1) to the data and examine the t-table
+sarima(x, p = 0, d = 0, q = 1)
+
+
+```
+
+## Fitting an ARMA model
+You are now ready to merge the AR model and the MA model into the ARMA model. We generated data from the ARMA(2,1) model,
+
+$X_t=X_{t-1}-.9X_{t-2}+W_t+0.8W_{t-1}$
+
+x <- arima.sim(model = list(order = c(2, 0, 1), ar = c(1, -.9), ma = .8), n = 250). Look at the simulated data and the sample ACF and PACF pair to determine a possible model.
+
+Recall that for ARMA(p,q) models, both the theoretical ACF and PACF tail off. In this case, the orders are difficult to discern from data and it may not be clear if either the sample ACF or sample PACF is cutting off or tailing off. In this case, you know the actual model orders, so fit an ARMA(2,1) to the generated data. General modeling strategies will be discussed further in the course.
+
+
+```{r}
+x <- arima.sim(model = list(order = c(2, 0, 1), ar = c(1, -.9), ma = .8), n = 250)
+# astsa is preloaded
+
+# Plot x
+plot(x)
+
+# Plot the sample P/ACF of x
+acf2(x)
+
+# Fit an ARMA(2,1) to the data and examine the t-table
+sarima(x, p = 2, d = 0, q = 1)
+```
+
