@@ -361,3 +361,472 @@ add.signal(strategy.st, name = "sigComparison",
            label = "longfilter")
 ```
 
+## Using sigComparison
+A sigComparison signal is a simple and useful way to compare two (hopefully related) quantities, such as two moving averages. Often, a sigComparison signal does not create a buy or sell signal by itself (as such a signal would involve buying or selling on every such day), but is most often useful as a filter for when another buy or sell rule should be followed.
+
+In this exercise, you will use sigComparison() to generate a signal comparison that specifies that the 50-day simple moving average (SMA) must be above the 200-day simple moving average (SMA). You will label this signal longfilter, because it signals that the short-term average is above the long-term average.
+
+```{r}
+# Add a sigComparison which specifies that SMA50 must be greater than SMA200, call it longfilter
+add.signal(strategy.st, name = "sigComparison", 
+           
+           # We are interested in the relationship between the SMA50 and the SMA200
+           arguments = list(columns = c("SMA50", "SMA200"), 
+                            
+                            # Particularly, we are interested when the SMA50 is greater than the SMA200
+                            relationship = "gt"),
+           
+           # Label this signal longfilter
+           label = "longfilter")
+```
+
+## Using sigCrossover
+While having a long filter is necessary, it is not sufficient to put on a trade for this strategy. However, the moment the condition does not hold, the strategy should not hold any position whatsoever. For this exercise, you will implement the opposite of the rule specified above using the sigCrossover() function.
+
+As opposed to sigComparison(), which will always state whether or not a condition holds, sigCrossover() only gives a positive the moment the signal first occurs, and then not again. This is useful for a signal that will be used to initiate a transaction, as you only want one transaction in most cases, rather than having transactions fire again and again.
+
+In this case, you will implement the sigCrossover() function specifying that the SMA50 crosses under the SMA200. You will label this signal filterexit, as it will exit your position when the moving average filter states that the environment is not conducive for the strategy to hold a position.
+
+```{r}
+# Add a sigCrossover which specifies that the SMA50 is less than the SMA200 and label it filterexit
+add.signal(strategy.st, name = "sigCrossover",
+           
+           # We're interested in the relationship between the SMA50 and the SMA200
+           arguments = list(columns = c("SMA50", "SMA200"),
+                            
+                            # The relationship is that the SMA50 crosses under the SMA200
+                            relationship = "lt"),
+           
+           # Label it filterexit
+           label = "filterexit")
+```
+## Using sigThreshold - I
+In the next two exercises, you will focus on the sigThreshold signal. The sigThreshold signal is mainly used for comparing an indicator to a fixed number, which usually has applications for bounded oscillators, or perhaps rolling statistical scores (for example, for a trading strategy that might choose to go long when a ratio of mean to standard deviation is at -2, or vice versa). Whereas sigComparison and sigCrossover deal with quantities that are usually based off of an indicator that takes values in the same general area as prices, sigThreshold exists specifically to cover those situations outside the bounds of indicators that take values similar to prices.
+
+Furthermore, the sigThreshold() function takes the cross argument, which specifies whether it will function similarly to sigComparison (cross = FALSE) or sigCrossover (cross = TRUE), respectively. In this exercise, you will implement a variant of sigThreshold that functions similarly to sigComparison.
+
+Your job will be to implement a sigThreshold that checks whether or not DVO_2_126 is under 20. This signal will serve as one of the two switches that need to be "on" in order to enter into a long position in the strategy.
+
+```{r}
+
+# Implement a sigThreshold which specifies that DVO_2_126 must be less than 20, label it longthreshold
+add.signal(strategy.st, name = "sigThreshold", 
+           
+           # Use the DVO_2_126 column
+           arguments = list(column = "DVO_2_126", 
+                            
+                            # The threshold is 20
+                            threshold = 20, 
+                            
+                            # We want the oscillator to be under this value
+                            relationship = "lt", 
+                            
+                            # We're interested in every instance that the oscillator is less than 20
+                            cross = FALSE), 
+           
+           # Label it longthreshold
+           label = "longthreshold")
+```
+
+## Using sigThreshold() - II
+In this exercise, you will implement a signal to exit a position given a certain threshold value of the DVO. While there are two entry signals that are both necessary but neither sufficient on its own, the two exit signals (this one and the one you implemented in an earlier exercise) are both sufficient on their own (but neither necessary in the existence of the other) to exit a position.
+
+In this exercise, you will again use sigThreshold(), this time counting when the DVO_2_126 crosses above a threshold of 80. To mimic a sigCrossover signal, set cross equal to TRUE Label this signal thresholdexit.
+
+```{r}
+# Add a sigThreshold signal to your strategy that specifies that DVO_2_126 must cross above 80 and label it thresholdexit
+add.signal(strategy.st, name = "sigThreshold", 
+           
+           # Reference the column of DVO_2_126
+           arguments = list(column = "DVO_2_126", 
+                            
+                            # Set a threshold of 80
+                            threshold = 80, 
+                            
+                            # The oscillator must be greater than 80
+                            relationship = "gt", 
+                            
+                            # We are interested only in the cross
+                            cross = TRUE), 
+           
+           # Label it thresholdexit
+           label = "thresholdexit")
+```
+
+## Using sigFormula()
+The last signal function is a bit more open-ended. The sigFormula() function uses string evaluation to offer immense flexibility in combining various indicators and signals you already added to your strategy in order to create composite signals. While such catch-all functionality may seem complicated at first, with proper signal implementation and labeling, a sigFormula signal turns out to be the simplest of logical programming statements encapsulated in some quantstrat syntactical structuring.
+
+In this exercise, you will get a taste of what the sigFormula function can do by stepping through the logic manually. You will need to use the applyIndicators() and applySignals() functions.
+
+```{r}
+# Create your dataset: test
+test_init <- applyIndicators(strategy.st, mktdata = OHLC(SPY))
+test <- applySignals(strategy = strategy.st, mktdata = test_init)
+```
+
+## Combining signals - I
+In the previous exercise, you created a dataset test containing information about whether longfilter is equal to 1 AND longthreshold is equal to 1.
+
+Next, you'll want to create a signal when BOTH longfilter and longthreshold are equal to 1. You will learn how to do just this in the next exercise. For now, let's inspect the data set test which was created in the previous exercise. This data is loaded in your workspace.
+
+Have a look at test on October 8, 2013. Are longfilter and longthreshold both equal to 1 on that date?
+
+```{r}
+test["2013-10-08"]
+# longfilter = 1 longthreshold = 1
+```
+
+## Combining signals - II
+In the previous exercise, you approximated a sigFormula signal by comparing the value of two other signals. In this final exercise, you will take this one step futher by using the sigFormula() function to generate a sigFormula signal.
+
+The goal of this exercise is simple. You want to enter into a position when both longfilter and longthreshold become true at the same time. The idea is this: You don't want to keep entering into a position for as long as conditions hold true, but you do want to hold a position when there's a pullback in an uptrending environment.
+
+Writing a sigFormula function is as simple as writing the argument of an "if statement" in base R inside the formula() function. In this case, you want to create a signal labeled longentry, which is true when both longfilter and longthreshold cross over to true at the same time.
+
+Once you complete this exercise, you will have a complete survey of how signals work in quantstrat!
+
+```{r}
+# Add a sigFormula signal to your code specifying that both longfilter and longthreshold must be TRUE, label it longentry
+add.signal(strategy.st, name = "sigFormula",
+           
+           # Specify that longfilter and longthreshold must be TRUE
+           arguments = list(formula = "longfilter & longthreshold", 
+                            
+                            # Specify that cross must be TRUE
+                            cross = TRUE),
+           
+           # Label it longentry
+           label = "longentry")
+```
+# Introduction to rules
+
+## Using add.rule() to implement an exit rule
+Welcome to the chapter on rules! While rules in quantstrat can become very complex, this chapter will fill in many of the details for you to help you develop an understanding of the actual mechanics of rules. Rules are the final mechanic in the trinity of quantstrat mechanics -- indicators, signals, and rules. Rules are a way for you to specify exactly how you will shape your transaction once you decide you wish to execute on a signal.
+
+Throughout this chapter, you will continue working the strategy developed in earlier chapters (strategy.st). Given that there are three rules to the strategy (two exit rules and one entry rule), there will be a handful of exercises to build up some intuition of the mechanics of rules.
+
+This exercise will introduce you to the add.rule() function, which allows you to add customized rules to your strategy. Your strategy from earlier chapters (strategy.st) is preloaded in your workspace.
+
+```{r}
+# Fill in the rule's type as exit
+add.rule(strategy.st, name = "ruleSignal", 
+         arguments = list(sigcol = "filterexit", sigval = TRUE, orderqty = "all", 
+                        ordertype = "market", orderside = "long", 
+                        replace = FALSE, prefer = "Open"), 
+         type = "exit")
+```
+
+## Specifying sigcol in add.rule()
+Great job! Although the add.rule() command looks complex, each argument is quite simple. To understand this command, you will explore each argument individually.
+
+First, add.rule() takes the argument sigcol, which specifies the signal column in your strategy. Like signals and indicators, all rules reference a column already present in your strategy. Rules relies on signals, and must therefore reference the signal columns in your strategy.
+
+In this exercise, you will supply the add.rule() call with the sigcol value, which will be set to filterexit (to reference the filterexit signal you created in the previous chapter). Specifically, the filterexit signal refers to the condition that the 50 day SMA has crossed under the 200 day SMA in your strategy. By creating a rule for this signal, you will be indicating that you wish to exit in this condition, as the market environment is no longer conducive to your position.
+
+As before, strategy.st is preloaded in your workspace.
+
+```{r}
+# Fill in the sigcol argument in add.rule()
+add.rule(strategy.st, name = "ruleSignal", 
+         arguments = list(sigcol = "filterexit", sigval = TRUE, orderqty = "all", 
+                        ordertype = "market", orderside = "long", 
+                        replace = FALSE, prefer = "Open"), 
+         type = "exit")
+```
+
+## Specifying sigval in add.rule()
+Now that you've specified the column containing the relevant signal in your strategy, the next argument to specify in add.rule() is sigval, or the value that your signal should take to trigger the rule.
+
+Remember that all signal outputs are either 1s or 0s. Effectively, a signal is either "on" or "off" at any given time. For our purposes, this is equivalent to two possible logical values: TRUE or FALSE. When specifying sigval in your add.rule() command, you need to indicate whether the rule is triggered when the signal value is TRUE or FALSE.
+
+To proceed with the new exit rule in your strategy, you will want to specify that a transaction should occcur when filterexit is equal to TRUE. The add.rule() command from your previous exercise is available in your workspace.
+
+```{r}
+# Fill in the sigval argument in add.rule()
+add.rule(strategy.st, name = "ruleSignal", 
+         arguments = list(sigcol = "filterexit", sigval = TRUE, orderqty = "all", 
+                        ordertype = "market", orderside = "long", 
+                        replace = FALSE, prefer = "Open"), 
+         type = "exit")
+```
+
+## Specifying orderqty in add.rule()
+Now that you have a grasp of the first set of arguments in the add.rule() function, it's time to move on to the more important arguments: the actual order being bought or sold! The orderqty argument in the ruleSignal specifies exactly how much of an asset you want to buy or sell, in numbers of shares.
+
+However, one salient feature of the exit rule type is that you can reduce your position to zero instantly with the all argument (hence, exiting). This is the mechanism we will implement in this exercise.
+
+```{r}
+# Fill in the orderqty argument in add.rule()
+add.rule(strategy.st, name = "ruleSignal", 
+         arguments = list(sigcol = "filterexit", sigval = TRUE, orderqty = "all", 
+                        ordertype = "market", orderside = "long", 
+                        replace = FALSE, prefer = "Open"), 
+         type = "exit")
+```
+
+## Specifying ordertype in add.rule()
+To this point you've specified the signal column, signal value, and order quantity associated with your rule. Next you will specify the type of order you will execute (ordertype).
+
+While there are multiple types of orders in quantstrat, for the scope of this course you will stick to market orders (ordertype = "market"). A market order is an order that states that you will buy or sell the asset at the prevailing price, regardless of the conditions in the market. An alternative type of orders is a limit order, which specifies that the transaction will only take place if certain price conditions are met (namely, if the price falls below a certain further threshold on the day of the order). The mechanics of limit orders are outside the scope of this course.
+
+```{r}
+# Fill in the ordertype argument in add.rule()
+add.rule(strategy.st, name = "ruleSignal", 
+         arguments = list(sigcol = "filterexit", sigval = TRUE, orderqty = "all", 
+                        ordertype = "market", orderside = "long", 
+                        replace = FALSE, prefer = "Open"), 
+         type = "exit")
+
+```
+
+## Specifying orderside in add.rule()
+The next critical argument to specify in your order is orderside, which can take two values: either long or short. In quantstrat, long and short side trades are siloed off separately so that quantstrat knows whether a trade is a long trade or a short trade. A long trade is one that profits by buying an asset in the hopes that the asset's price will rise. A short trade is one that sells an asset before owning it, hoping to buy it back later at a lower price.
+
+For your strategy, you will want to take only long orders.
+
+```{r}
+# Fill in the orderside argument in add.rule()
+add.rule(strategy.st, name = "ruleSignal", 
+         arguments = list(sigcol = "filterexit", sigval = TRUE, orderqty = "all", 
+                        ordertype = "market", orderside = "long", 
+                        replace = FALSE, prefer = "Open"), 
+         type = "exit")
+```
+
+## Specifying replace in add.rule()
+In quantstrat, the replace argument specifies whether or not to ignore all other signals on the same date when the strategy acts upon one signal. This is generally not a desired quality in a well-crafted trading system. Therefore, for your exit rule, you should set replace to FALSE.
+
+Furthermore, you will be working with a new rule. Previously, the exit rule you worked with was when the market environment was no longer conducive to a trade. In this case, you will be working with a rule that sells when the DVO has crossed a certain threshold. In particular, you will be working with the thresholdexit rule now.
+
+```{r}
+# Fill in the replace argument in add.rule()
+add.rule(strategy.st, name = "ruleSignal", 
+         arguments = list(sigcol = "thresholdexit", sigval = TRUE, orderqty = "all", 
+                        ordertype = "market", orderside = "long", 
+                        replace = FALSE, prefer = "Open"), 
+         type = "exit")
+```
+
+## Specifying prefer in add.rule()
+Lastly, of the basic rule arguments, there is the aspect of the prefer argument. In quantstrat, orders have a "next-bar" mechanism. That is, if you would gain a signal on Tuesday, the earliest that a position would actually fulfil itself would be on the Wednesday after. However, this can be solved by placing orders to execute on the next possible opening price, rather than wait for an entire day to pass before being able to actually purchase/sell the asset.
+
+```{r}
+# Fill in the prefer argument in add.rule()
+add.rule(strategy.st, name = "ruleSignal", 
+         arguments = list(sigcol = "thresholdexit", sigval = TRUE, orderqty = "all", 
+                        ordertype = "market", orderside = "long", 
+                        replace = FALSE, prefer = "Open"), 
+         type = "exit")
+```
+
+## Using add.rule() to implement an entry rule
+Excellent! You've mastered every element of the rule building process in quantstrat. While thus far you've added rules step-by-step, now it's time to put it all together and see how well you've been able to absorb the material in this chapter.
+
+The opposite of an exit rule is an enter rule. On enter rules, orderqty cannot be set to "all" because there is no initial position on which to act. In this exercise, you will implement an enter rule that references the longentry signal in your strategy and will buy one share of an asset.
+
+```{r}
+# Create an entry rule of 1 share when all conditions line up to enter into a position
+add.rule(strategy.st, name = "ruleSignal", 
+         
+         # Use the longentry column as the sigcol
+         arguments = list(sigcol = "longentry", 
+                        
+                        # Set sigval to TRUE
+                        sigval = TRUE, 
+                        
+                        # Set orderqty to 1
+                        orderqty = 1,
+                        
+                        # Use a market type of order
+                        ordertype = "market", 
+                        
+                        # Take the long orderside
+                        orderside = "long", 
+                        
+                        # Do not replace other signals
+                        replace = FALSE, 
+                        
+                        # Buy at the next day's opening price
+                        prefer = "Open"), 
+         
+         # This is an enter type rule, not an exit
+         type = "enter")
+```
+
+## Implementing a rule with an order sizing function
+In quantstrat, the amount of an asset transacted may not always be a fixed quantity in regards to the actual shares. The constructs that allow quantstrat to vary the amount of shares bought or sold are called order sizing functions. Due to the extensive additional syntax in creating a proper order sizing function, coding your own order sizing function from scratch is outside the scope of this course.
+
+However, using a pre-coded order sizing function is straightforward. The first thing to know is that when using an order sizing function, the orderqty argument is no longer relevant, as the order quantity is determined by the order sizing function. Calling an order sizing function with your add.rule() call is fairly straightforward. The inputs for the order sizing function are mixed in with the rest of the inputs inside the arguments that you have been working with throughout this chapter.
+
+In this exercise, you will use the osFUN argument to specify a function called osMaxDollar. This is not passed in as a string, but rather as an object. The only difference is that the name of the order sizing function is not encased in quotes.
+
+The additional arguments to this function are tradeSize and maxSize, both of which should take tradesize, which you defined several chapters earlier. This has been made available in your workspace.
+
+```{r}
+# Add a rule that uses an osFUN to size an entry position
+library(quantstrat)
+osMaxDollar <- function(data, timestamp, orderqty, ordertype, orderside,
+                        portfolio, symbol, prefer = "Open", tradeSize,
+                        maxSize, integerQty = TRUE,
+                        ...) {
+  pos <- getPosQty(portfolio, symbol, timestamp)
+  if(prefer == "Close") {
+    price <- as.numeric(Cl(mktdata[timestamp,]))
+  } else {
+    price <- as.numeric(Op(mktdata[timestamp,]))
+  }
+  posVal <- pos*price
+  if (orderside=="short") {
+    dollarsToTransact <- max(tradeSize, maxSize-posVal)
+    #If our position is profitable, we don't want to cover needlessly.
+    if(dollarsToTransact > 0) {dollarsToTransact = 0}
+  } else {
+    dollarsToTransact <- min(tradeSize, maxSize-posVal)
+    #If our position is profitable, we don't want to sell needlessly.
+    if(dollarsToTransact < 0) {dollarsToTransact = 0}
+  }
+  qty <- dollarsToTransact/price
+  if(integerQty) {
+    qty <- trunc(qty)
+  }
+  return(qty)
+}
+
+add.rule(strategy = strategy.st, name = "ruleSignal",
+         arguments = list(sigcol = "longentry", sigval = TRUE, ordertype = "market",
+                          orderside = "long", replace = FALSE, prefer = "Open",
+                          
+                          # Use the osFUN called osMaxDollar
+                          osFUN = osMaxDollar,
+                          
+                          # The tradeSize argument should be equal to tradesize (defined earlier)
+                          tradeSize = tradesize,
+                          
+                          # The maxSize argument should be equal to tradesize as well
+                          maxSize = tradesize),
+         type = "enter")
+```
+
+# Analyzing your strategy
+
+## Running your strategy
+Congratulations on creating a strategy in quantstrat! To review, your strategy uses three separate indicators and five separate signals. The strategy requires both the threshold of the DVO_2_126 indicator to be under 20 and the SMA50 to be greater than the SMA200. The strategy sells when the DVO_2_126 crosses above 80, or the SMA50 crosses under the SMA200.
+
+For this strategy to work properly, you specified five separate signals:
+
+sigComparison for SMA50 being greater than SMA200;
+sigThreshold with cross set to FALSE for DVO_2_126 less than 20;
+sigFormula to tie them together and set cross to TRUE;
+sigCrossover with SMA50 less than SMA200; and
+sigThreshold with cross set to TRUE for DVO_2_126 greater than 80.
+The strategy invests $100,000 (your initeq) into each trade, and may have some small dollar cost averaging if the DVO_2_126 oscillates around 20 (though the effect is mostly negligible compared to the initial allocation).
+
+In this final chapter, you will learn how to view the actual results of your portfolio. But first, in order to generate the results, you need to run your strategy and fill in some more boilerplate code to make sure quantstrat records everything. The code in this exercise is code you will have to copy and paste in the future.
+
+```{r}
+# Use applyStrategy() to apply your strategy. Save this to out
+out <- applyStrategy(strategy = strategy.st, portfolios = portfolio.st)
+
+# Update your portfolio (portfolio.st)
+updatePortf(portfolio.st)
+daterange <- time(getPortfolio(portfolio.st)$summary)[-1]
+
+# Update your account (account.st)
+updateAcct(account.st, daterange)
+updateEndEq(account.st)
+```
+
+## Profit factor
+One of the most vital statistics of any systematic trading strategy is the profit factor. The profit factor is how many dollars you make for each dollar you lose. A profit factor above 1 means your strategy is profitable. A profit factor below 1 means you should head back to the drawing board.
+
+In this exercise, you will explore the profit factor in your strategy by creating an object called tstats that displays the trade statistics for your system. In general, trade statistics are generated by using the tradeStats() command.
+
+```{r}
+# Get the tradeStats for your portfolio
+tstats <- tradeStats(Portfolios = portfolio.st)
+
+# Print the profit factor
+tstats$Profit.Factor
+```
+
+## Percent positive
+While profit factor is one important statistic, it may be heavily influenced by only a few good trades. The percent positive statistic lets you know how many of your trades were winners. A trading system based on oscillation trading (such as yours!) will likely have a high percentage of winners. This is certainly a statistic you should look for in your own trade statistics.
+
+The trading statistics object you created in the last exercise (tstats) has been preloaded into your workspace. Examine it. What is the percent positive statistic?
+
+```{r}
+tstats
+
+# 70.90909
+```
+
+## Using chart.Posn()
+One of the most enlightening things about a trading system is exploring what positions it took over the course of the trading simulation, as well as when it had its profits and drawdowns. Looking at a picture of the performance can deliver a great deal of insight in terms of refining similar trading systems in the future.
+
+In this exercise, you will use the chart.Posn() function. This generates a crisp and informative visualization of the performance of your trading system over the course of the simulation.
+
+Your portfolio strategy (portfolio.st) is preloaded into your environment.
+
+```{r}
+# Use chart.Posn to view your system's performance on SPY
+chart.Posn(Portfolio = portfolio.st, Symbol = "SPY")
+
+```
+
+## Adding an indicator to a chart.Posn() chart
+One of the more interesting things you can do with the chart.Posn() function is to superimpose indicators on top of it. This can help show what the strategy has actually been doing and why. However, in order to do this, you will need to recalculate the indicators outside the scope of your strategy. Once this is done, you simply add them to the chart.Posn plot.
+
+In this exercise, you will add the three indicators from your strategy to the chart.Posn plot you just created. The two moving averages (SMA50 and SMA200) will be superimposed on the price series, while the DVO_2_126 will have its own window.
+
+```{r}
+# Compute the SMA50
+sma50 <- SMA(x = Cl(SPY), n = 50)
+
+# Compute the SMA200
+sma200 <- SMA(x = Cl(SPY), n = 200)
+
+# Compute the DVO_2_126 with an navg of 2 and a percentlookback of 126
+dvo <- DVO(HLC = HLC(SPY), navg = 2, percentlookback = 126)
+
+# Recreate the chart.Posn of the strategy from the previous exercise
+chart.Posn(Portfolio = portfolio.st, Symbol = "SPY")
+
+# Overlay the SMA50 on your plot as a blue line
+add_TA(sma50, on = 1, col = "blue")
+
+# Overlay the SMA200 on your plot as a red line
+add_TA(sma200, on = 1, col = "red")
+
+# Add the DVO_2_126 to the plot in a new window
+add_TA(dvo)
+```
+
+## Cash Sharpe ratio
+When working with cash profit and loss statistics, quantstrat offers a way to compute a Sharpe ratio not just from returns, but from the actual profit and loss statistics themselves. A Sharpe ratio is a metric that compares the average reward to the average risk taken. Generally, a Sharpe ratio above 1 is a marker of a strong strategy.
+
+In this exercise, you will see that because of trading P&L (profit and loss), one can compute a Sharpe ratio based on these metrics. The code below can be used to compute the Sharpe ratio based off of P&L. Copy the code in the console. In what range is the Sharpe ratio you obtain?
+
+portpl <- .blotter$portfolio.firststrat$summary$Net.Trading.PL
+SharpeRatio.annualized(portpl, geometric=FALSE)
+
+```{r}
+portpl <- .blotter$portfolio.firststrat$summary$Net.Trading.PL
+SharpeRatio.annualized(portpl, geometric=FALSE)
+
+portpl
+# 0.5165
+```
+
+## Returns Sharpe ratio in quantstrat
+One of the main reasons to include an initial equity (in this case, initeq, which is set to 100,000) in your strategy is to be able to work with returns, which are based off of your profit and loss over your initial equity.
+
+While you just computed a cash Sharpe ratio in the previous exercise, you will see in this exercise that quantstrat can also compute the standard returns-based Sharpe ratio as well.
+
+```{r}
+# Get instrument returns
+instrets <- PortfReturns(portfolio.st)
+
+# Compute Sharpe ratio from returns
+SharpeRatio.annualized(instrets, geometric = FALSE)
+```
+
